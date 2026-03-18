@@ -1,6 +1,10 @@
-﻿# Clinical Baseline Benchmark
+﻿
 
-This repository adapts three static single-cell multimodal methods to the PEAG paper's clinical benchmark:
+
+
+# Clinical Baseline Benchmark
+
+This repository adapts three static single-cell multimodal methods to the PEAG paper's clinical benchmark for metabolomics imputation:
 
 - `MIDAS`  
 - `scVAEIT`  
@@ -21,7 +25,7 @@ This benchmark strictly replicates the PEAG paper's **static baseline protocol**
 | **Prediction Target** | Reconstruct current visit's metabolomics profile |
 | **Critical Constraints** | ❌ No autoregressive recurrence❌ No historical state input❌ No cross-visit temporal encoding |
 
-> 💡 This design validates methods as **static multimodal baselines**, not longitudinal models.
+> 💡 This design validates methods as **static multimodal baselines** for clinical imputation tasks.
 
 ---
 
@@ -56,7 +60,7 @@ Two input formats supported:
 ## 📂 Repository Structure
 
 ```
-clinical_static_baseline_benchmark/
+clinical_baseline_benchmark/
 ├── data.py               # Data loading, standardization, export utilities
 ├── scvaeit_adapter.py    # Gaussian two-block scVAEIT wrapper (lab → metabolomics)
 ├── midas_adapter.py      # MIDAS wrapper with runtime Gaussian decoder registration
@@ -68,6 +72,7 @@ scripts/
 ├── evaluate_predictions.py       # Generic prediction evaluation
 r/
 └── run_stabmap_benchmark.R       # StabMap reference/query embedding + KNN imputation
+baseline-model/                   # External model implementations (user-provided)
 ```
 
 ---
@@ -97,18 +102,30 @@ r/
 
 ## 🚀 Standard Workflow
 
+### 1. Setup external model implementations
 ```bash
-# 1. Prepare standardized matrices (required for StabMap; optional for others)
+# Create directory structure
+mkdir -p baseline-model
+
+# Clone required model repositories
+git clone https://github.com/jaydu1/scVAEIT.git baseline-model/scVAEIT
+git clone https://github.com/labomics/midas.git baseline-model/midas
+git clone https://github.com/MarioniLab/StabMap.git baseline-model/StabMap
+```
+
+### 2. Run benchmark pipeline
+```bash
+# Prepare standardized matrices (required for StabMap; optional for others)
 python scripts/prepare_tabular_benchmark.py \
   --input /path/to/split_dir \
   --output-dir ./outputs/prepared
 
-# 2. Run method-specific pipelines
+# Run method-specific pipelines
 python scripts/run_scvaeit.py --input /path/to/split_dir --output-dir ./outputs/scvaeit
 python scripts/run_midas.py --input /path/to/split_dir --output-dir ./outputs/midas
 Rscript r/run_stabmap_benchmark.R ./outputs/prepared ./outputs/stabmap
 
-# 3. (Optional) Re-evaluate existing predictions
+# (Optional) Re-evaluate existing predictions
 python scripts/evaluate_predictions.py \
   --truth ./outputs/prepared/test_metab.csv \
   --prediction ./outputs/stabmap/test_metab_pred.csv \
@@ -136,11 +153,13 @@ BiocNeighbors, abind, slam
 
 ## ℹ️ Critical Notes
 
-1. **Local Model Sources**:  
-   Scripts depend on pre-included implementations:  
-   - `baseline-model/midas/`  
-   - `baseline-model/scVAEIT/`  
-   - `baseline-model/StabMap/`  
+1. **External Model Sources**:  
+   This repository **does not include** the actual model implementations. You must clone them manually:
+   ```bash
+   git clone https://github.com/jaydu1/scVAEIT.git baseline-model/scVAEIT
+   git clone https://github.com/labomics/midas.git baseline-model/midas
+   git clone https://github.com/MarioniLab/StabMap.git baseline-model/StabMap
+   ```
 
 2. **Design Philosophy**:  
    - All adaptation logic explicitly documented for reproducibility and review transparency  
@@ -148,8 +167,7 @@ BiocNeighbors, abind, slam
    - Metabolomics imputation uses **only current-visit lab data**  
 
 3. **Scope Clarification**:  
-   ✅ Valid for evaluating static multimodal imputation capability  
-   ❌ Not intended for longitudinal dynamics modeling  
+   This benchmark focuses on evaluating static multimodal imputation capabilities in clinical settings. For longitudinal modeling, consider methods specifically designed for temporal dynamics.
 
 ---
 
